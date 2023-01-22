@@ -1,6 +1,7 @@
 # UOCIS322 - Project 1 #
 
 This project will get you started with creating a simple webpage server.
+Cheyanne Kester
 
 ## Getting started
 

@@ -12,7 +12,7 @@
   located in ./pages  (where '.' is the directory from which this
   program is run).
 """
-
+import os # me
 import config    # Configure from .ini files and command line
 import logging   # Better than print statements
 logging.basicConfig(format='%(levelname)s:%(message)s',
@@ -22,7 +22,6 @@ log = logging.getLogger(__name__)
 
 import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
-
 
 def listen(portnum):
     """
@@ -35,9 +34,9 @@ def listen(portnum):
        the port is already in use).
     """
     # Internet, streaming socket
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
     # Bind to port and make accessible from anywhere that has our IP address
-    serversocket.bind(('', portnum))
+    serversocket.bind(('', portnum)) #'127.0.0.1' if you want localhost??
     serversocket.listen(1)    # A real server would have multiple listeners
     return serversocket
 
@@ -68,6 +67,8 @@ CAT = """
    =(   )=
 """
 
+path = "./pages" # I added, should read from config DOCROOT?
+
 # HTTP response codes, as the strings we will actually send.
 # See:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 # or    http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
@@ -77,11 +78,19 @@ STATUS_FORBIDDEN = "HTTP/1.0 403 Forbidden\n\n"
 STATUS_NOT_FOUND = "HTTP/1.0 404 Not Found\n\n"
 STATUS_NOT_IMPLEMENTED = "HTTP/1.0 401 Not Implemented\n\n"
 
+def searchForFiles():
+    # my function to find .html and .css files
+
+    # first, see if they exist at all
+    for file in os.listdir(path):
+        if file.endswith(".css") or file.endswith(".html"):
+            print(os.pat.join(path, file))
 
 def respond(sock):
     """
     This server responds only to GET requests (not PUT, POST, or UPDATE).
     Any valid GET request is answered with an ascii graphic of a cat.
+    THIS IS THE ONLY FUNCTION TO CHANGE
     """
     sent = 0
     request = sock.recv(1024)  # We accept only short requests
@@ -92,7 +101,8 @@ def respond(sock):
     parts = request.split()
     if len(parts) > 1 and parts[0] == "GET":
         transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        # call search for files ?
+        transmit(CAT, sock)                 #EDIT 
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
@@ -138,12 +148,15 @@ def get_options():
 def main():
     options = get_options()
     port = options.PORT
+    docroot = options.DOCROOT # yes?? do we just navigate ???
     if options.DEBUG:
         log.setLevel(logging.DEBUG)
     sock = listen(port)
     log.info("Listening on port {}".format(port))
     log.info("Socket is {}".format(sock))
     serve(sock, respond)
+
+    #the way this file is looking at PORT is the same way it should look at DOCROOT
 
 
 if __name__ == "__main__":
