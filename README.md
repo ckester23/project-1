@@ -1,7 +1,11 @@
 # UOCIS322 - Project 1 #
 
 This project will get you started with creating a simple webpage server.
+
 Cheyanne Kester
+This project contains a program that runs a simple webpage server, that either 
+outputs an ASCII representation of a cat, or, if the user makes a request, outputs 
+whatever content is described in the `.html` or `.css` file matching that request (if such a file exists).
 
 ## Getting started
 

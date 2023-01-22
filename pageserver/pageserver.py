@@ -6,7 +6,7 @@
   error handling and many other things to keep the illustration as simple
   as possible.
 
-  FIXME:
+  FIXME: DONE
   Currently this program always serves an ascii graphic of a cat.
   Change it to serve files if they end with .html or .css, and are
   located in ./pages  (where '.' is the directory from which this
@@ -62,12 +62,10 @@ def serve(sock, func):
 # Starter version only serves cat pictures. In fact, only a
 # particular cat picture.  This one.
 ##
-CAT = """
+CAT = """Hello, you made it to the main page, here's a cat!
      ^ ^
    =(   )=
 """
-
-path = "./pages" # I added, should read from config DOCROOT?
 
 # HTTP response codes, as the strings we will actually send.
 # See:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
@@ -78,19 +76,11 @@ STATUS_FORBIDDEN = "HTTP/1.0 403 Forbidden\n\n"
 STATUS_NOT_FOUND = "HTTP/1.0 404 Not Found\n\n"
 STATUS_NOT_IMPLEMENTED = "HTTP/1.0 401 Not Implemented\n\n"
 
-def searchForFiles():
-    # my function to find .html and .css files
-
-    # first, see if they exist at all
-    for file in os.listdir(path):
-        if file.endswith(".css") or file.endswith(".html"):
-            print(os.pat.join(path, file))
-
 def respond(sock):
     """
     This server responds only to GET requests (not PUT, POST, or UPDATE).
-    Any valid GET request is answered with an ascii graphic of a cat.
-    THIS IS THE ONLY FUNCTION TO CHANGE
+    Any valid GET request is answered with either an ascii graphic of a cat,
+    or the output from a file that matches the request (if such a file exists)
     """
     sent = 0
     request = sock.recv(1024)  # We accept only short requests
@@ -100,13 +90,48 @@ def respond(sock):
 
     parts = request.split()
     if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        # call search for files ?
-        transmit(CAT, sock)                 #EDIT 
+        print(request)
+        if ".." in request or "~" in request:
+            transmit(STATUS_FORBIDDEN, sock)
+            transmit("Oops! The request contained forbidden characters `..` or `~`\n", sock)
+
+        elif len(parts[1]) <= 1:
+            # navigate to main page on empty requests: "/" or " "
+            transmit(STATUS_OK, sock)
+            transmit(CAT, sock) 
+
+        else:
+            cnt = 0
+
+            # to access the files in our directory, use getcwd()
+            for file in os.listdir(os.getcwd()):
+
+                # I don't want non-useful files
+                if file.endswith(".html") or file.endswith(".css"):
+
+                    # check if the file we have matches the one requested
+                    if ("/" + file) == parts[1]:
+                        transmit(STATUS_OK, sock)
+
+                        # now send the file's contents to display
+                        opened = open(file, "r")
+                        for line in opened.readlines():
+                            transmit(line, sock)
+                        opened.close()
+
+                        cnt += 1 # this will help us in the next line
+
+            # if we never found a matching file:       
+            if cnt == 0:
+                transmit(STATUS_NOT_FOUND, sock)
+                transmit("Oops! I could not find that file\n", sock)
+    
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
         transmit("\nI don't handle this request: {}\n".format(request), sock)
+        # this section keeps acting weird; 
+        # broken pipe in transmit() line 144: sent += sock.send(buff)
 
     sock.shutdown(socket.SHUT_RDWR)
     sock.close()
@@ -148,16 +173,21 @@ def get_options():
 def main():
     options = get_options()
     port = options.PORT
-    docroot = options.DOCROOT # yes?? do we just navigate ???
+    docroot = options.DOCROOT 
+
+    # we need a way to access the files in docroot, so we'll change the 
+    # current working directory!
+    if docroot:
+        os.chdir(docroot)
+
     if options.DEBUG:
         log.setLevel(logging.DEBUG)
+
     sock = listen(port)
     log.info("Listening on port {}".format(port))
     log.info("Socket is {}".format(sock))
+
     serve(sock, respond)
-
-    #the way this file is looking at PORT is the same way it should look at DOCROOT
-
 
 if __name__ == "__main__":
     main()
